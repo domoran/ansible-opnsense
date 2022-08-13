@@ -1,0 +1,57 @@
+# For all active items, apply XML settings, either from settings_dict or from settings list
+- name: Applying {{name}} Settings
+  delegate_to: localhost  
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: "{{ basepath + filter_par + '/' + setting.key }}"
+    value: "{{ setting.value }}"
+    pretty_print: yes
+
+  loop: "{{ item.settings_dict | default({}) | dict2items | union(item.settings | default([]))}}"
+  loop_control:
+    loop_var: setting
+  vars: 
+    state: "{{ item.state | default('active') }}"
+    # default xpath filter for filtering an item from description
+    filter_str: "{{ \"[descr/text()='\" + item.descr + \"']\" }}"
+    filter_par: "{{ filter | default(filter_str) }}"
+
+  when: state == 'active'
+
+# remove all items with keys where state = absent
+- name: Removing {{name}} inactive state settings
+  delegate_to: localhost  
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: "{{ basepath + filter_par }}"
+    state: absent
+  vars: 
+    state: "{{ item.state | default('active') }}"
+    # default xpath filter for filtering an item from description
+    filter_str: "{{ \"[descr/text()='\" + item.descr + \"']\" }}"
+    filter_par: "{{ filter | default(filter_str) }}"
+  when: state == 'absent'
+
+  # remove all items with keys where state = absent
+- name: Debug Removing {{name}} inactive state settings
+  delegate_to: localhost  
+  debug:
+    msg: |
+        path: "{{ local_config_path }}"
+        xpath: "{{ basepath + filter_par }}"
+        state: absent
+  vars: 
+    state: "{{ item.state | default('active') }}"
+    # default xpath filter for filtering an item from description
+    filter_str: "{{ \"[descr/text()='\" + item.descr + \"']\" }}"
+    filter_par: "{{ filter | default(filter_str) }}"
+  when: state == 'absent'
+  
+# remove empty nodes
+- name: Removing {{name}} empty node
+  delegate_to: localhost
+  xml:
+    path: "{{ local_config_path }}"
+    xpath: "{{ basepath + '[not(node())]'}}"
+    state: absent
+  
